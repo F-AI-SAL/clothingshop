@@ -1,0 +1,464 @@
+{% load static %}
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}La Rosa Formals{% endblock %}</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Playfair Display', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="bg-white text-gray-900 dark:bg-black dark:text-gray-100 transition-colors duration-300">
+
+<!-- ================= NAVBAR ================= -->
+<header class="sticky top-0 z-50 border-b bg-white/80 backdrop-blur
+               dark:bg-black/80 dark:border-gray-800">
+  <div class="mx-auto max-w-6xl px-4">
+    <div class="h-16 flex items-center gap-6">
+
+      <!-- Logo -->
+      <a href="/" class="shrink-0 leading-none">
+        <div class="font-serif text-lg font-bold tracking-wide">LA ROSA</div>
+        <div class="text-xs tracking-[0.25em] text-gray-500 dark:text-gray-400">FORMALS</div>
+      </a>
+
+      <!-- Desktop Nav -->
+      <nav class="hidden lg:flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+        {% for parent in nav_parents %}
+          <div class="relative group">
+            <a href="#"
+               class="px-3 py-2 rounded-lg font-medium transition
+                      hover:bg-gray-100 dark:hover:bg-gray-900
+                      hover:text-black dark:hover:text-white">
+              {{ parent.name }}
+            </a>
+
+            {% if parent.children.all %}
+            <!-- Mega Dropdown -->
+            <div
+              class="absolute left-0 top-full mt-3 w-[560px]
+                     rounded-2xl border bg-white dark:bg-neutral-950
+                     shadow-2xl dark:shadow-black/40
+                     p-5 z-50
+                     invisible opacity-0 translate-y-3
+                     group-hover:visible group-hover:opacity-100 group-hover:translate-y-0
+                     transition-all duration-300 ease-out
+                     dark:border-gray-800">
+
+              <div class="mb-3 text-xs font-semibold tracking-widest uppercase text-gray-500 dark:text-gray-400">
+                {{ parent.name }}
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                {% for child in parent.children.all %}
+                  {% if child.is_active %}
+                    <a href="{% url 'store:product_list' %}?cat={{ child.slug }}"
+                       class="rounded-xl px-3 py-2 text-sm
+                              text-gray-800 dark:text-gray-200
+                              hover:bg-gray-50 dark:hover:bg-gray-900
+                              transition">
+                      {{ child.name }}
+                    </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+
+              <div class="mt-4 pt-4 border-t dark:border-gray-800 flex items-center justify-between">
+                <span class="text-xs text-gray-500 dark:text-gray-400">Explore all in {{ parent.name }}</span>
+                <a href="{% url 'store:product_list' %}?cat={{ parent.slug }}"
+                   class="text-xs font-semibold underline underline-offset-4 hover:text-black dark:hover:text-white transition">
+                  View all
+                </a>
+              </div>
+
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </nav>
+
+      <!-- Right actions -->
+      <div class="ml-auto flex items-center gap-2">
+
+        <!-- Search -->
+        <button class="hidden md:inline-flex h-10 w-10 items-center justify-center rounded-full
+                       hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+                title="Search">
+          🔍
+        </button>
+
+        <!-- Wishlist -->
+        <button class="hidden md:inline-flex h-10 w-10 items-center justify-center rounded-full
+                       hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+                title="Wishlist">
+          ♡
+        </button>
+
+        <!-- Cart (CTA style) -->
+        <a href="{% url 'store:cart_detail' %}"
+           class="inline-flex h-10 items-center justify-center gap-2 rounded-full
+                  border border-gray-200 dark:border-gray-800
+                  px-4 text-sm font-semibold
+                  hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+           title="Cart">
+          🛒 <span class="hidden sm:inline">Cart</span>
+        </a>
+
+        <!-- Theme toggle -->
+        <button
+          onclick="document.documentElement.classList.toggle('dark')"
+          class="inline-flex h-10 w-10 items-center justify-center rounded-full
+                 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+          title="Toggle theme">
+          🌙
+        </button>
+
+        <!-- Mobile menu button -->
+        <button id="drawerOpenBtn"
+                class="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-full
+                       hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+                title="Menu"
+                aria-label="Open menu">
+          ☰
+        </button>
+
+      </div>
+    </div>
+  </div>
+</header>
+<!-- ================= END NAVBAR ================= -->
+
+
+<!-- ================= MOBILE DRAWER + OVERLAY ================= -->
+
+<!-- Overlay -->
+<div id="drawerOverlay"
+     class="fixed inset-0 z-50 hidden bg-black/40 backdrop-blur-sm opacity-0 transition-opacity duration-300">
+</div>
+
+<!-- Drawer -->
+<aside id="drawer"
+       class="fixed right-0 top-0 z-[60] h-full w-[86%] max-w-sm
+              translate-x-full transition-transform duration-300 ease-out
+              bg-white dark:bg-neutral-950 border-l dark:border-gray-800 shadow-2xl">
+
+  <!-- Drawer Header -->
+  <div class="flex items-center justify-between px-5 h-16 border-b dark:border-gray-800">
+    <div class="leading-none">
+      <div class="font-serif text-base font-bold tracking-wide">LA ROSA</div>
+      <div class="text-[10px] tracking-[0.25em] text-gray-500 dark:text-gray-400">FORMALS</div>
+    </div>
+
+    <button id="drawerCloseBtn"
+            class="h-10 w-10 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+            aria-label="Close menu">
+      ✕
+    </button>
+  </div>
+
+  <!-- Drawer Content -->
+  <div class="p-5 overflow-y-auto h-[calc(100%-4rem)]">
+
+    <!-- Quick actions -->
+    <div class="flex items-center gap-2">
+      <a href="{% url 'store:cart_detail' %}"
+         class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl
+                border border-gray-200 dark:border-gray-800
+                px-4 py-3 text-sm font-semibold
+                hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+        🛒 Cart
+      </a>
+
+      <button class="h-12 w-12 rounded-xl border border-gray-200 dark:border-gray-800
+                     hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+              title="Search">
+        🔍
+      </button>
+
+      <button class="h-12 w-12 rounded-xl border border-gray-200 dark:border-gray-800
+                     hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+              title="Wishlist">
+        ♡
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <div class="my-6 border-t dark:border-gray-800"></div>
+
+    <!-- Accordion Categories -->
+    <div class="space-y-2">
+      <div class="text-xs font-semibold tracking-widest uppercase text-gray-500 dark:text-gray-400 mb-2">
+        Shop Categories
+      </div>
+
+      {% for parent in nav_parents %}
+        <div class="rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <button type="button"
+                  class="accordionBtn w-full flex items-center justify-between px-4 py-3
+                         text-left font-semibold text-sm
+                         hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+                  aria-expanded="false">
+            <span>{{ parent.name }}</span>
+            <span class="accordionIcon transition-transform duration-200">⌄</span>
+          </button>
+
+          <div class="accordionPanel hidden px-2 pb-2">
+            {% if parent.children.all %}
+              <div class="grid grid-cols-1 gap-1">
+                {% for child in parent.children.all %}
+                  {% if child.is_active %}
+                    <a href="{% url 'store:product_list' %}?cat={{ child.slug }}"
+                       class="rounded-xl px-3 py-2 text-sm
+                              text-gray-700 dark:text-gray-200
+                              hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+                      {{ child.name }}
+                    </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% else %}
+              <a href="{% url 'store:product_list' %}?cat={{ parent.slug }}"
+                 class="block rounded-xl px-3 py-2 text-sm
+                        text-gray-700 dark:text-gray-200
+                        hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+                View all in {{ parent.name }}
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Extra links -->
+    <div class="mt-8 space-y-2 text-sm">
+      <a href="{% url 'store:product_list' %}"
+         class="block rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800
+                hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+        New Arrivals
+      </a>
+      <a href="#"
+         class="block rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800
+                hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+        Sale / Discount
+      </a>
+    </div>
+
+    <div class="mt-8 text-xs text-gray-500 dark:text-gray-400">
+      © {% now "Y" %} La Rosa Formals
+    </div>
+  </div>
+</aside>
+
+<!-- ================= END MOBILE DRAWER ================= -->
+
+
+<!-- ================= PAGE CONTENT ================= -->
+<main>
+  {% block content %}{% endblock %}
+</main>
+<!-- ================= END PAGE CONTENT ================= -->
+
+
+<!-- ================= FOOTER ================= -->
+<footer class="mt-20 bg-black text-white dark:bg-neutral-950">
+  <div class="mx-auto max-w-6xl px-4 py-14 grid gap-10 md:grid-cols-4">
+
+    <div>
+      <div class="font-extrabold tracking-wide font-serif">
+        LA ROSA <span class="font-sans font-medium text-gray-400">FORMALS</span>
+      </div>
+      <p class="mt-4 text-sm text-gray-400 leading-relaxed">
+        Premium fashion brand from Bangladesh — blending modern elegance with
+        timeless craftsmanship.
+      </p>
+    </div>
+
+    <div>
+      <h4 class="text-sm font-semibold mb-4">Quick Links</h4>
+      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">FAQ</a>
+      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">How To Order</a>
+      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">About Us</a>
+      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">Contact Us</a>
+    </div>
+
+    <div>
+      <h4 class="text-sm font-semibold mb-4">Policies</h4>
+      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">Shipping Policy</a>
+      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">Privacy Policy</a>
+      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">Refund Policy</a>
+      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">Terms & Condition</a>
+    </div>
+
+    <div>
+      <h4 class="text-sm font-semibold mb-4">Sign up & Save</h4>
+      <p class="text-sm text-gray-400 mb-4">
+        Get updates on new arrivals & exclusive offers.
+      </p>
+      <form class="flex gap-2">
+        <input type="email"
+               class="w-full rounded-xl px-3 py-2 text-sm text-black focus:outline-none"
+               placeholder="Enter your email">
+        <button type="submit"
+                class="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black
+                       transition hover:scale-[1.03] active:scale-[0.97]">
+          Submit
+        </button>
+      </form>
+    </div>
+
+  </div>
+</footer>
+<!-- ================= END FOOTER ================= -->
+<!-- ================= TOAST (Django Messages) ================= -->
+<div id="toastArea" class="fixed top-5 right-5 z-[9999] space-y-3">
+  {% if messages %}
+    {% for message in messages %}
+      <div class="toastItem pointer-events-auto flex items-start gap-3 rounded-2xl border p-4 shadow-2xl
+                  bg-white text-gray-900 border-gray-200
+                  dark:bg-neutral-950 dark:text-gray-100 dark:border-gray-800
+                  opacity-0 translate-y-2 transition-all duration-300"
+           data-timeout="2500">
+        <div class="mt-0.5">
+          {% if message.tags == "success" %}
+            ✅
+          {% elif message.tags == "error" %}
+            ❌
+          {% elif message.tags == "warning" %}
+            ⚠️
+          {% else %}
+            ℹ️
+          {% endif %}
+        </div>
+
+        <div class="min-w-[220px]">
+          <div class="text-sm font-semibold">
+            {{ message|safe }}
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            La Rosa Formals
+          </div>
+        </div>
+
+        <button type="button"
+                class="toastClose ml-2 h-8 w-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+                aria-label="Close toast">
+          ✕
+        </button>
+      </div>
+    {% endfor %}
+  {% endif %}
+</div>
+<!-- ================= END TOAST ================= -->
+<!-- ================= TINY JS: Drawer + Overlay + Accordion ================= -->
+<script>
+  (function () {
+    const drawer = document.getElementById('drawer');
+    const overlay = document.getElementById('drawerOverlay');
+    const openBtn = document.getElementById('drawerOpenBtn');
+    const closeBtn = document.getElementById('drawerCloseBtn');
+
+    const openDrawer = () => {
+      overlay.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        overlay.classList.add('opacity-100');
+        drawer.classList.remove('translate-x-full');
+      });
+      document.body.style.overflow = 'hidden';
+    };
+
+    const closeDrawer = () => {
+      overlay.classList.remove('opacity-100');
+      drawer.classList.add('translate-x-full');
+      document.body.style.overflow = '';
+      setTimeout(() => overlay.classList.add('hidden'), 250);
+    };
+
+    if (openBtn) openBtn.addEventListener('click', openDrawer);
+    if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+
+    overlay.addEventListener('click', closeDrawer);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+    });
+
+    // Accordion: open one at a time
+    const buttons = document.querySelectorAll('.accordionBtn');
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const panel = btn.parentElement.querySelector('.accordionPanel');
+        const icon = btn.querySelector('.accordionIcon');
+        const isOpen = btn.getAttribute('aria-expanded') === 'true';
+
+        buttons.forEach((b) => {
+          if (b !== btn) {
+            b.setAttribute('aria-expanded', 'false');
+            const p = b.parentElement.querySelector('.accordionPanel');
+            const i = b.querySelector('.accordionIcon');
+            if (p) p.classList.add('hidden');
+            if (i) i.classList.remove('rotate-180');
+          }
+        });
+
+        btn.setAttribute('aria-expanded', String(!isOpen));
+        if (panel) panel.classList.toggle('hidden');
+        if (icon) icon.classList.toggle('rotate-180');
+      });
+    });
+  })();
+</script>
+<!-- ================= END JS ================= -->
+<script>
+  (function () {
+    const toasts = document.querySelectorAll('.toastItem');
+    if (!toasts.length) return;
+
+    toasts.forEach((toast) => {
+      // animate in
+      requestAnimationFrame(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+        toast.classList.add('opacity-100', 'translate-y-0');
+      });
+
+      // close button
+      const closeBtn = toast.querySelector('.toastClose');
+      const close = () => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 200);
+      };
+
+      if (closeBtn) closeBtn.addEventListener('click', close);
+
+      // auto hide
+      const timeout = parseInt(toast.getAttribute('data-timeout') || '2500', 10);
+      setTimeout(close, timeout);
+    });
+  })();
+</script>
+
+
+</body>
+</html>

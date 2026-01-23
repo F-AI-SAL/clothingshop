@@ -1,0 +1,243 @@
+{% extends "store/base.html" %}
+{% block title %}La Rosa Formals | Premium Fashion{% endblock %}
+
+{% block content %}
+
+<!-- ================= HERO ================= -->
+<section class="relative">
+  {% if banner %}
+    <div class="h-[520px] md:h-[640px] bg-gray-100 overflow-hidden">
+      <img src="{{ banner.image.url }}" alt="Hero"
+           class="h-full w-full object-cover">
+    </div>
+
+    <!-- overlay -->
+    <div class="absolute inset-0 bg-black/40"></div>
+
+    <!-- content -->
+    <div class="absolute inset-0 flex items-center">
+      <div class="mx-auto max-w-6xl px-4 text-white">
+        <div class="max-w-xl">
+          <h1 class="font-serif text-4xl md:text-6xl font-bold leading-tight">
+            {{ banner.title }}
+          </h1>
+
+          {% if banner.subtitle %}
+            <p class="mt-4 text-gray-200 leading-relaxed">
+              {{ banner.subtitle }}
+            </p>
+          {% endif %}
+
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="{{ banner.button_link }}"
+               class="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3
+                      text-sm font-semibold text-black
+                      transition hover:scale-[1.02] active:scale-[0.98]">
+              {{ banner.button_text }}
+            </a>
+
+            <a href="{% url 'store:product_list' %}"
+               class="inline-flex items-center justify-center rounded-xl border border-white/40 px-6 py-3
+                      text-sm font-semibold text-white
+                      transition hover:bg-white/10 active:scale-[0.98]">
+              Browse All
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <!-- fallback hero if no banner -->
+    <div class="h-[420px] md:h-[520px] bg-gray-100 flex items-center">
+      <div class="mx-auto max-w-6xl px-4">
+        <h1 class="font-serif text-4xl md:text-6xl font-bold">Modern Elegance</h1>
+        <p class="mt-3 text-gray-600 max-w-md">
+          Premium fashion collections for women, men & couples.
+        </p>
+        <a href="{% url 'store:product_list' %}"
+           class="inline-flex mt-6 items-center justify-center rounded-xl bg-black px-6 py-3
+                  text-sm font-semibold text-white
+                  transition hover:bg-gray-900 hover:scale-[1.02] active:scale-[0.98]">
+          Shop Now
+        </a>
+      </div>
+    </div>
+  {% endif %}
+</section>
+
+<!-- ================= TRUST BAR ================= -->
+<section class="border-b bg-white dark:bg-black dark:border-gray-800">
+  <div class="mx-auto max-w-6xl px-4 py-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center text-sm">
+    <div class="rounded-2xl p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+      <div class="font-semibold">Nationwide Delivery</div>
+      <div class="text-gray-500 dark:text-gray-400">All over Bangladesh</div>
+    </div>
+    <div class="rounded-2xl p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+      <div class="font-semibold">Cash on Delivery</div>
+      <div class="text-gray-500 dark:text-gray-400">Safe payment</div>
+    </div>
+    <div class="rounded-2xl p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+      <div class="font-semibold">Premium Quality</div>
+      <div class="text-gray-500 dark:text-gray-400">Fabric guaranteed</div>
+    </div>
+    <div class="rounded-2xl p-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition">
+      <div class="font-semibold">Easy Returns</div>
+      <div class="text-gray-500 dark:text-gray-400">Hassle-free</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CATEGORIES (Admin Controlled Image + Tagline) ================= -->
+<section class="py-16 bg-white dark:bg-black">
+  <div class="mx-auto max-w-6xl px-4">
+    <div class="flex items-end justify-between gap-4 mb-8">
+      <div>
+        <h2 class="text-2xl font-semibold">Shop by Category</h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Curated collections for every style & occasion.
+        </p>
+      </div>
+      <a href="{% url 'store:product_list' %}"
+         class="text-sm font-semibold underline underline-offset-4 hover:text-black dark:hover:text-white transition">
+        View all
+      </a>
+    </div>
+
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {% for parent in nav_parents %}
+        <a href="{% url 'store:product_list' %}?cat={{ parent.slug }}"
+           class="group overflow-hidden rounded-2xl border bg-white dark:bg-neutral-950 dark:border-gray-800
+                  transition duration-300 hover:shadow-2xl hover:-translate-y-1">
+
+          <div class="h-56 bg-gray-100 overflow-hidden">
+            {% if parent.image %}
+              <img src="{{ parent.image.url }}"
+                   class="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+                   alt="{{ parent.name }}">
+            {% else %}
+              <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f"
+                   class="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+                   alt="{{ parent.name }}">
+            {% endif %}
+          </div>
+
+          <div class="p-4">
+            <div class="font-semibold text-lg">{{ parent.name }}</div>
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+              {{ parent.tagline|default:"Explore collection" }}
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ================= NEW ARRIVALS ================= -->
+<section class="bg-gray-50 dark:bg-neutral-950 py-16">
+  <div class="mx-auto max-w-6xl px-4">
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h2 class="text-2xl font-semibold">New Arrivals</h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Latest drops—fresh styles added regularly.
+        </p>
+      </div>
+
+      <a href="{% url 'store:product_list' %}"
+         class="text-sm font-semibold underline underline-offset-4 hover:text-black dark:hover:text-white transition">
+        View all
+      </a>
+    </div>
+
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {% for product in products %}
+        <a href="{% url 'store:product_detail' product.slug %}"
+           class="group overflow-hidden rounded-2xl border bg-white dark:bg-black dark:border-gray-800
+                  transition duration-300 hover:shadow-2xl hover:-translate-y-1">
+
+          <div class="h-72 bg-gray-100 overflow-hidden">
+            {% with img=product.images.first %}
+              {% if img %}
+                <img src="{{ img.image.url }}"
+                     class="h-full w-full object-cover transition duration-500 group-hover:scale-110"
+                     alt="{{ product.title }}">
+              {% else %}
+                <div class="h-full w-full flex items-center justify-center text-gray-400 text-sm">
+                  No image
+                </div>
+              {% endif %}
+            {% endwith %}
+          </div>
+
+          <div class="p-4">
+            <div class="text-xs tracking-widest uppercase text-gray-500 dark:text-gray-400">
+              LAROSA BRAND
+            </div>
+            <div class="mt-1 font-semibold leading-snug">
+              {{ product.title }}
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <div class="text-sm text-gray-700 dark:text-gray-200">
+                PKR {{ product.price }}
+              </div>
+              <span class="text-xs text-gray-500 dark:text-gray-400 group-hover:text-black dark:group-hover:text-white transition">
+                View →
+              </span>
+            </div>
+          </div>
+
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEATURED BANNER (Admin Controlled) ================= -->
+{% if featured %}
+<section class="py-20 bg-white dark:bg-black">
+  <div class="mx-auto max-w-6xl px-4">
+    <div class="relative rounded-3xl overflow-hidden border dark:border-gray-800">
+      <img src="{{ featured.image.url }}"
+           class="h-[360px] w-full object-cover" alt="{{ featured.title }}">
+
+      <div class="absolute inset-0 bg-black/45 flex items-center">
+        <div class="px-6 md:px-10 text-white max-w-xl">
+          <div class="text-xs font-semibold tracking-widest uppercase text-white/80">
+            Featured Collection
+          </div>
+
+          <h3 class="mt-2 font-serif text-3xl md:text-4xl font-semibold">
+            {{ featured.title }}
+          </h3>
+
+          {% if featured.subtitle %}
+            <p class="mt-3 text-gray-200 leading-relaxed">
+              {{ featured.subtitle }}
+            </p>
+          {% endif %}
+
+          <a href="{{ featured.button_link }}"
+             class="inline-flex mt-5 items-center justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-black
+                    transition hover:scale-[1.02] active:scale-[0.98]">
+            {{ featured.button_text }}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ================= BRAND STORY ================= -->
+<section class="py-16 border-t bg-white dark:bg-black dark:border-gray-800">
+  <div class="mx-auto max-w-4xl px-4 text-center">
+    <h2 class="font-serif text-2xl font-semibold">About La Rosa</h2>
+    <p class="mt-4 text-gray-600 dark:text-gray-300 leading-relaxed">
+      La Rosa Formals is a Bangladesh-based fashion brand dedicated to premium craftsmanship,
+      modern silhouettes and timeless elegance.
+    </p>
+  </div>
+</section>
+
+{% endblock %}

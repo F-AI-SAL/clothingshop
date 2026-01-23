@@ -1,0 +1,142 @@
+{% extends "store/base.html" %}
+{% block title %}{{ product.title }} | La Rosa{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 py-8">
+
+  <!-- Breadcrumb -->
+  <div class="text-xs text-gray-500">
+    <a href="/" class="hover:text-black">Home</a>
+    <span class="mx-2">›</span>
+    <span class="text-gray-700">{{ product.title }}</span>
+  </div>
+
+  <div class="mt-6 grid gap-10 lg:grid-cols-2">
+
+    <!-- Images grid -->
+    <div class="grid grid-cols-2 gap-4">
+      {% for img in images %}
+        <div class="overflow-hidden rounded bg-gray-100">
+          <img src="{{ img.image.url }}" alt="{{ img.alt_text|default:product.title }}" class="h-full w-full object-cover" />
+        </div>
+      {% empty %}
+        <div class="col-span-2 rounded bg-gray-100 p-10 text-center text-gray-500">
+          No images uploaded.
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Right side info -->
+    <div>
+      <div class="text-xs uppercase tracking-widest text-gray-500">{{ product.category.name }}</div>
+      <h1 class="mt-2 text-2xl font-semibold">{{ product.title }}</h1>
+      {% if product.sku %}
+        <div class="mt-1 text-xs text-gray-400">{{ product.sku }}</div>
+      {% endif %}
+
+      <div class="mt-4 text-lg font-semibold">PKR {{ product.price }}</div>
+
+      <form method="post" action="{% url 'store:cart_add' product.id %}" class="mt-6 space-y-5">
+        {% csrf_token %}
+
+        {% with variants=product.variants.all %}
+  {% if variants %}
+    <div class="space-y-5">
+
+      <!-- Color -->
+      <div>
+        <div class="text-sm font-medium">Color</div>
+        <select name="color"
+                class="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm">
+          {% for v in variants %}
+            {% if v.is_active %}
+              <option value="{{ v.color }}">{{ v.color|default:"Default" }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Size -->
+      <div>
+        <div class="text-sm font-medium">Size</div>
+        <select name="size"
+                class="mt-2 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm">
+          {% for v in variants %}
+            {% if v.is_active %}
+              <option value="{{ v.size }}">{{ v.size|default:"Free" }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+    </div>
+  {% endif %}
+{% endwith %}
+
+        <!-- Qty -->
+        <div class="flex items-center gap-3">
+          <div class="text-sm font-medium">Qty</div>
+          <input type="number" name="qty" min="1" value="1" class="w-20 rounded border px-3 py-2 text-sm" />
+        </div>
+
+        <!-- Buttons -->
+        <button class="w-full rounded bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-gray-900">
+          ADD TO CART
+        </button>
+
+        <a href="#" class="block w-full rounded border border-gray-300 px-4 py-3 text-center text-sm font-semibold hover:border-black">
+          ADD TO FAVORITE
+        </a>
+      </form>
+
+      <!-- Accordion sections -->
+      <div class="mt-10 divide-y border-t">
+        <details class="py-4" open>
+          <summary class="cursor-pointer text-sm font-semibold">Description</summary>
+          <p class="mt-2 text-sm text-gray-600">{{ product.description|default:"No description yet." }}</p>
+        </details>
+
+        <details class="py-4">
+          <summary class="cursor-pointer text-sm font-semibold">Fit</summary>
+          <p class="mt-2 text-sm text-gray-600">Add fit details later.</p>
+        </details>
+
+        <details class="py-4">
+          <summary class="cursor-pointer text-sm font-semibold">Product details</summary>
+          <p class="mt-2 text-sm text-gray-600">Material, care, etc.</p>
+        </details>
+
+        <details class="py-4">
+          <summary class="cursor-pointer text-sm font-semibold">Shipping and returns</summary>
+          <p class="mt-2 text-sm text-gray-600">Add shipping policy later.</p>
+        </details>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Related Products -->
+  <div class="mt-14">
+    <h2 class="text-lg font-semibold">Related Products</h2>
+    <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {% for p in related %}
+        <a href="{% url 'store:product_detail' p.slug %}" class="group rounded border border-gray-200 overflow-hidden">
+          <div class="aspect-[4/5] bg-gray-100">
+            {% with first=p.images.first %}
+              {% if first %}
+                <img src="{{ first.image.url }}" class="h-full w-full object-cover group-hover:scale-105 transition" />
+              {% endif %}
+            {% endwith %}
+          </div>
+          <div class="p-3">
+            <div class="text-xs text-gray-500 uppercase">LAROSA BRAND</div>
+            <div class="mt-1 text-sm font-semibold">{{ p.title }}</div>
+            <div class="mt-1 text-sm text-gray-700">PKR {{ p.price }}</div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

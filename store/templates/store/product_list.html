@@ -1,0 +1,185 @@
+{% extends "store/base.html" %}
+{% block title %}Shop | La Rosa{% endblock %}
+
+{% block content %}
+<section class="bg-white dark:bg-black">
+  <div class="mx-auto max-w-6xl px-4 py-10">
+
+    <!-- Top bar -->
+    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div>
+        <div class="text-xs tracking-widest uppercase text-gray-500 dark:text-gray-400">
+          La Rosa Formals
+        </div>
+        <h1 class="mt-2 font-serif text-3xl md:text-4xl font-semibold">
+          Shop
+        </h1>
+
+        {% if request.GET.cat %}
+          <div class="mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs
+                      border-gray-200 text-gray-700 bg-gray-50
+                      dark:border-gray-800 dark:text-gray-200 dark:bg-gray-900/40">
+            <span class="font-semibold">Filter:</span>
+            <span>{{ request.GET.cat }}</span>
+            <a href="{% url 'store:product_list' %}"
+               class="ml-1 underline underline-offset-4 hover:text-black dark:hover:text-white transition">
+              Clear
+            </a>
+          </div>
+        {% else %}
+          <p class="mt-3 text-sm text-gray-600 dark:text-gray-300">
+            Explore our premium collections—crafted for modern elegance.
+          </p>
+        {% endif %}
+      </div>
+
+      <!-- Sort placeholder -->
+      <div class="flex items-center gap-2">
+        <div class="text-xs text-gray-500 dark:text-gray-400">Sort:</div>
+        <div class="rounded-xl border px-3 py-2 text-sm
+                    border-gray-200 bg-white text-gray-700
+                    dark:border-gray-800 dark:bg-neutral-950 dark:text-gray-200">
+          Latest
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-8 border-t dark:border-gray-800"></div>
+
+    {% if products %}
+      <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {% for p in products %}
+          <div class="group overflow-hidden rounded-2xl border bg-white dark:bg-neutral-950 dark:border-gray-800
+                      transition duration-300 hover:shadow-2xl hover:-translate-y-1">
+
+            <!-- Image -->
+            <a href="{% url 'store:product_detail' p.slug %}" class="block">
+              <div class="aspect-[4/5] bg-gray-100 overflow-hidden">
+                {% with first=p.images.first %}
+                  {% if first %}
+                    <img src="{{ first.image.url }}"
+                         alt="{{ p.title }}"
+                         class="h-full w-full object-cover transition duration-500 group-hover:scale-110">
+                  {% else %}
+                    <div class="h-full w-full flex items-center justify-center text-gray-400 text-sm">
+                      No image
+                    </div>
+                  {% endif %}
+                {% endwith %}
+              </div>
+            </a>
+
+            <!-- Info -->
+            <div class="p-4">
+              <div class="text-xs tracking-widest uppercase text-gray-500 dark:text-gray-400">
+                LAROSA BRAND
+              </div>
+
+              <a href="{% url 'store:product_detail' p.slug %}"
+                 class="mt-1 block font-semibold leading-snug text-gray-900 dark:text-gray-100 hover:underline underline-offset-4">
+                {{ p.title }}
+              </a>
+
+              <div class="mt-2 flex items-center justify-between">
+                <div class="text-sm text-gray-700 dark:text-gray-200">
+                  PKR {{ p.price }}
+                </div>
+                <span class="text-xs text-gray-500 dark:text-gray-400">
+                  {{ p.category.name }}
+                </span>
+              </div>
+
+              <!-- Quick Add -->
+              <form method="post" action="{% url 'store:cart_add' p.id %}" class="mt-4 space-y-3">
+                {% csrf_token %}
+
+                <div class="flex items-center justify-between gap-3">
+                  <div class="text-xs font-semibold text-gray-600 dark:text-gray-300">Qty</div>
+
+                  <div class="inline-flex items-center rounded-full border bg-white dark:bg-neutral-950
+                              border-gray-200 dark:border-gray-800 overflow-hidden">
+                    <button type="button"
+                            class="qtyMinus h-9 w-10 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+                            aria-label="Decrease quantity">
+                      −
+                    </button>
+
+                    <input type="number" name="qty" min="1" value="1"
+                           class="qtyInput h-9 w-12 text-center text-sm bg-transparent focus:outline-none">
+
+                    <button type="button"
+                            class="qtyPlus h-9 w-10 hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+                            aria-label="Increase quantity">
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Optional: quick default variant (if you want) -->
+                {% if p.color_list %}
+                  <input type="hidden" name="color" value="{{ p.color_list.0 }}">
+                {% endif %}
+                {% if p.size_list %}
+                  <input type="hidden" name="size" value="{{ p.size_list.0 }}">
+                {% endif %}
+
+                <button
+                  class="w-full inline-flex items-center justify-center rounded-xl bg-black px-4 py-2.5
+                         text-sm font-semibold text-white
+                         transition hover:bg-gray-900 hover:scale-[1.01] active:scale-[0.98]
+                         dark:bg-white dark:text-black dark:hover:bg-gray-100">
+                  Add to Cart
+                </button>
+              </form>
+
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <!-- Empty state -->
+      <div class="mt-12 rounded-2xl border border-dashed p-10 text-center
+                  border-gray-200 bg-gray-50
+                  dark:border-gray-800 dark:bg-neutral-950">
+        <div class="font-serif text-2xl font-semibold">No products found</div>
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+          Try clearing filters or check back later for new arrivals.
+        </p>
+        <a href="{% url 'store:product_list' %}"
+           class="inline-flex mt-6 items-center justify-center rounded-xl bg-black px-6 py-3
+                  text-sm font-semibold text-white
+                  transition hover:bg-gray-900 hover:scale-[1.02] active:scale-[0.98]">
+          Back to Shop
+        </a>
+      </div>
+    {% endif %}
+
+  </div>
+</section>
+
+<!-- Tiny JS: per-card qty +/- -->
+<script>
+  (function () {
+    document.querySelectorAll('form').forEach((form) => {
+      const minus = form.querySelector('.qtyMinus');
+      const plus = form.querySelector('.qtyPlus');
+      const input = form.querySelector('.qtyInput');
+
+      if (!minus || !plus || !input) return;
+
+      const getQty = () => {
+        const v = parseInt(input.value || '1', 10);
+        return isNaN(v) ? 1 : v;
+      };
+
+      minus.addEventListener('click', () => {
+        input.value = Math.max(1, getQty() - 1);
+      });
+
+      plus.addEventListener('click', () => {
+        input.value = getQty() + 1;
+      });
+    });
+  })();
+</script>
+{% endblock %}

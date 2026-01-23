@@ -1,0 +1,157 @@
+{% extends "store/base.html" %}
+{% block title %}Checkout | La Rosa{% endblock %}
+
+{% block content %}
+<section class="bg-white dark:bg-black">
+  <div class="mx-auto max-w-6xl px-4 py-10">
+    <div class="text-xs tracking-widest uppercase text-gray-500 dark:text-gray-400">Secure Checkout</div>
+    <h1 class="mt-2 font-serif text-3xl font-semibold">Checkout</h1>
+
+    <div class="mt-8 grid gap-8 lg:grid-cols-12">
+      <!-- Form -->
+      <form method="post" class="lg:col-span-7 space-y-6">
+        {% csrf_token %}
+
+        <div class="rounded-2xl border bg-white dark:bg-neutral-950 dark:border-gray-800 p-5">
+          <div class="font-semibold">Customer</div>
+
+          <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Full name *</label>
+              <input name="full_name" required
+                     class="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm focus:outline-none"
+                     placeholder="Your name">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Phone *</label>
+              <input name="phone" required
+                     class="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm focus:outline-none"
+                     placeholder="01XXXXXXXXX">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Email (optional)</label>
+              <input name="email" type="email"
+                     class="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm focus:outline-none"
+                     placeholder="you@email.com">
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border bg-white dark:bg-neutral-950 dark:border-gray-800 p-5">
+          <div class="font-semibold">Shipping address</div>
+
+          <div class="mt-4 grid gap-4">
+            <div>
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Address *</label>
+              <textarea name="address" required rows="3"
+                        class="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm focus:outline-none"
+                        placeholder="House/Road, Area, Details"></textarea>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">City</label>
+                <input name="city"
+                       class="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm focus:outline-none"
+                       placeholder="Dhaka">
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Area</label>
+                <input name="area"
+                       class="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm focus:outline-none"
+                       placeholder="Dhanmondi">
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Postal code</label>
+                <input name="postal_code"
+                       class="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm focus:outline-none"
+                       placeholder="1209">
+              </div>
+            </div>
+
+            <div>
+              <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Notes (optional)</label>
+              <textarea name="notes" rows="2"
+                        class="mt-1 w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm focus:outline-none"
+                        placeholder="Delivery instruction..."></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border bg-white dark:bg-neutral-950 dark:border-gray-800 p-5">
+          <div class="font-semibold">Payment</div>
+          <div class="mt-4 grid gap-3">
+            <label class="flex items-center gap-2 text-sm">
+              <input type="radio" name="payment_method" value="cod" checked>
+              <span>Cash on Delivery</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm opacity-70">
+              <input type="radio" name="payment_method" value="bkash" disabled>
+              <span>bKash (coming soon)</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm opacity-70">
+              <input type="radio" name="payment_method" value="nagad" disabled>
+              <span>Nagad (coming soon)</span>
+            </label>
+          </div>
+        </div>
+
+        <button
+          class="w-full inline-flex items-center justify-center rounded-xl bg-black px-4 py-3
+                 text-sm font-semibold text-white transition hover:bg-gray-900 hover:scale-[1.01] active:scale-[0.98]
+                 dark:bg-white dark:text-black dark:hover:bg-gray-100">
+          Place Order
+        </button>
+      </form>
+
+      <!-- Summary -->
+      <div class="lg:col-span-5">
+        <div class="rounded-2xl border bg-white dark:bg-neutral-950 dark:border-gray-800 p-5 sticky top-24">
+          <div class="font-semibold">Summary</div>
+
+          <div class="mt-4 space-y-3">
+            {% for it in items %}
+              <div class="flex justify-between text-sm">
+                <div class="text-gray-700 dark:text-gray-200">
+                  {{ it.product.title }} <span class="text-gray-500">× {{ it.qty }}</span>
+                </div>
+                <div class="font-semibold">BDT {{ it.line_total }}</div>
+              </div>
+            {% endfor %}
+          </div>
+          <form method="post" action="{% url 'store:apply_coupon' %}" class="mt-4 flex gap-2">
+  {% csrf_token %}
+  <input name="coupon" placeholder="Coupon code"
+         class="w-full rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent px-3 py-2 text-sm">
+  <button class="rounded-xl bg-black px-4 py-2 text-sm font-semibold text-white
+                 dark:bg-white dark:text-black">
+    Apply
+  </button>
+</form>
+
+          <div class="mt-5 border-t dark:border-gray-800 pt-4 space-y-2 text-sm">
+            <div class="flex justify-between text-gray-600 dark:text-gray-300">
+              <span>Subtotal</span><span>BDT {{ subtotal }}</span>
+            </div>
+            <div class="flex justify-between text-gray-600 dark:text-gray-300">
+              <span>Discount</span><span>- BDT {{ discount }}</span>
+            </div>
+            <div class="flex justify-between text-gray-600 dark:text-gray-300">
+              <span>Shipping</span><span>BDT {{ shipping_cost }}</span>
+            </div>
+            <div class="border-t dark:border-gray-800 pt-3 flex justify-between font-semibold">
+              <span>Total</span><span>BDT {{ total }}</span>
+            </div>
+          </div>
+
+          <a href="{% url 'store:cart_detail' %}"
+             class="mt-4 inline-flex text-sm font-semibold underline underline-offset-4 text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition">
+            Back to cart
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}
