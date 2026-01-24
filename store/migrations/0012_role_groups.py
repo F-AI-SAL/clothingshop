@@ -9,10 +9,10 @@ def create_groups(apps, schema_editor):
     Permission = apps.get_model("auth", "Permission")
     ContentType = apps.get_model("contenttypes", "ContentType")
 
-    order_ct = ContentType.objects.get(app_label="store", model="order")
-    payment_ct = ContentType.objects.get(app_label="store", model="paymenttransaction")
-    shipment_ct = ContentType.objects.get(app_label="store", model="shipment")
-    courier_ct = ContentType.objects.get(app_label="store", model="couriersettings")
+    order_ct, _ = ContentType.objects.get_or_create(app_label="store", model="order")
+    payment_ct, _ = ContentType.objects.get_or_create(app_label="store", model="paymenttransaction")
+    shipment_ct, _ = ContentType.objects.get_or_create(app_label="store", model="shipment")
+    courier_ct, _ = ContentType.objects.get_or_create(app_label="store", model="couriersettings")
 
     def perms(ct, codenames):
         return list(Permission.objects.filter(content_type=ct, codename__in=codenames))
