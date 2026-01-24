@@ -301,7 +301,12 @@ ADMIN_IP_ALLOWLIST = [ip.strip() for ip in os.getenv("ADMIN_IP_ALLOWLIST", "").s
 CONTENT_SECURITY_POLICY = {
     "DIRECTIVES": {
         "default-src": ("'self'",),
-        "script-src": ("'self'", "'unsafe-inline'", "https://connect.facebook.net"),
+        "script-src": (
+            "'self'",
+            "'unsafe-inline'",
+            "https://connect.facebook.net",
+            "https://cdn.tailwindcss.com",
+        ),
         "style-src": ("'self'", "'unsafe-inline'", "https://fonts.googleapis.com"),
         "font-src": ("'self'", "https://fonts.gstatic.com", "data:"),
         "img-src": ("'self'", "data:", "https://www.facebook.com"),
