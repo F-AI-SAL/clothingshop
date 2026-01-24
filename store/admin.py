@@ -29,6 +29,8 @@ from .models import (
     ManualNotificationLog,
     SiteSettings,
     NavLink,
+    ConsentRecord,
+    GdprRequest,
 )
 
 
@@ -566,6 +568,63 @@ class NavLinkAdmin(admin.ModelAdmin):
     list_filter = ("location", "is_active")
     search_fields = ("label", "url")
     ordering = ("location", "sort_order")
+
+
+@admin.register(ConsentRecord)
+class ConsentRecordAdmin(admin.ModelAdmin):
+    list_display = ("consent_type", "email", "phone", "is_granted", "source", "created_at")
+    list_filter = ("consent_type", "is_granted")
+    search_fields = ("email", "phone", "source")
+    ordering = ("-created_at",)
+
+
+@admin.register(GdprRequest)
+class GdprRequestAdmin(admin.ModelAdmin):
+    list_display = ("email", "request_type", "status", "created_at", "completed_at")
+    list_filter = ("request_type", "status")
+    search_fields = ("email", "notes")
+    ordering = ("-created_at",)
+    actions = ["mark_processing", "mark_completed", "anonymize_orders_by_email"]
+
+    def mark_processing(self, request, queryset):
+        queryset.update(status="processing")
+        self.message_user(request, "Selected requests set to processing.")
+    mark_processing.short_description = "Mark selected as Processing"
+
+    def mark_completed(self, request, queryset):
+        queryset.update(status="completed", completed_at=timezone.now())
+        self.message_user(request, "Selected requests set to completed.")
+    mark_completed.short_description = "Mark selected as Completed"
+
+    def anonymize_orders_by_email(self, request, queryset):
+        emails = set(queryset.values_list("email", flat=True))
+        updated = 0
+        for order in Order.objects.filter(email__in=emails):
+            order.full_name = "Anonymized"
+            order.phone = ""
+            order.email = ""
+            order.address = ""
+            order.city = ""
+            order.area = ""
+            order.postal_code = ""
+            order.notes = ""
+            order.save(
+                update_fields=[
+                    "full_name",
+                    "phone",
+                    "email",
+                    "address",
+                    "city",
+                    "area",
+                    "postal_code",
+                    "notes",
+                ]
+            )
+            if hasattr(order, "payment") and order.payment.proof_image:
+                order.payment.proof_image.delete(save=True)
+            updated += 1
+        self.message_user(request, f"Anonymized {updated} order(s) for selected GDPR emails.")
+    anonymize_orders_by_email.short_description = "GDPR: anonymize orders for selected emails"
 
 # =========================
 # Coupon

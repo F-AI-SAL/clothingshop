@@ -398,6 +398,58 @@ class NavLink(models.Model):
         return f"{self.label} ({self.location})"
 
 # =========================
+# Consent + GDPR
+# =========================
+class ConsentRecord(models.Model):
+    history = HistoricalRecords()
+    CONSENT_CHOICES = (
+        ("marketing", "Marketing"),
+        ("analytics", "Analytics"),
+        ("email", "Email"),
+        ("sms", "SMS"),
+    )
+
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    consent_type = models.CharField(max_length=20, choices=CONSENT_CHOICES)
+    is_granted = models.BooleanField(default=True)
+    source = models.CharField(max_length=120, blank=True, help_text="signup, checkout, popup, etc.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.consent_type} ({'yes' if self.is_granted else 'no'})"
+
+
+class GdprRequest(models.Model):
+    history = HistoricalRecords()
+    REQUEST_CHOICES = (
+        ("export", "Export"),
+        ("delete", "Delete"),
+    )
+    STATUS_CHOICES = (
+        ("pending", "Pending"),
+        ("processing", "Processing"),
+        ("completed", "Completed"),
+        ("rejected", "Rejected"),
+    )
+
+    email = models.EmailField()
+    request_type = models.CharField(max_length=20, choices=REQUEST_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    notes = models.TextField(blank=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_request_type_display()} ({self.email})"
+
+# =========================
 # Coupon
 # =========================
 class Coupon(models.Model):
