@@ -1,0 +1,55 @@
+{% extends "two_factor/_base.html" %}
+{% load i18n %}
+{% load two_factor_tags %}
+
+{% block two_factor_content %}
+  <h1 class="text-2xl font-semibold">Admin Login</h1>
+  {% if wizard.steps.current == 'auth' %}
+    <p class="text-sm text-gray-600 dark:text-gray-300">Enter your admin credentials to continue.</p>
+  {% elif wizard.steps.current == 'token' %}
+    <p class="text-sm text-gray-600 dark:text-gray-300">{{ device|as_verbose_action }}</p>
+  {% elif wizard.steps.current == 'backup' %}
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      Use a backup token if your main device is unavailable.
+    </p>
+  {% endif %}
+
+  <form action="" method="post" class="mt-6 space-y-4">
+    {% csrf_token %}
+    {% include "two_factor/_wizard_forms.html" %}
+
+    <input type="submit" value="" hidden />
+
+    {% if other_devices %}
+      <div class="rounded-xl border border-gray-200 p-4 text-sm dark:border-gray-800">
+        <div class="font-semibold mb-2">{% trans "Use another authentication method" %}</div>
+        <div class="space-y-2">
+          {% for other in other_devices %}
+            <button name="challenge_device" value="{{ other.persistent_id }}"
+                    class="w-full rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-800"
+                    type="submit">
+              {{ other|as_action }}
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% include "two_factor/_wizard_actions.html" %}
+  </form>
+
+  {% if backup_tokens %}
+    <div class="mt-6 border-t pt-4">
+      <form action="" method="post">
+        {% csrf_token %}
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+          {% trans "Use a backup token instead" %}
+        </p>
+        <button name="wizard_goto_step" type="submit" value="backup"
+                class="mt-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-800">
+          {% trans "Use Backup Token" %}
+        </button>
+      </form>
+    </div>
+  {% endif %}
+{% endblock %}

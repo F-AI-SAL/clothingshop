@@ -1,0 +1,19 @@
+{% extends "two_factor/_base.html" %}
+{% load i18n %}
+
+{% block two_factor_content %}
+  <h1 class="text-2xl font-semibold">Two-Factor Enabled</h1>
+  <p class="text-sm text-gray-600 dark:text-gray-300">
+    Your account is now protected with two-factor authentication.
+  </p>
+
+  <div class="mt-6 flex flex-wrap gap-3">
+    <a href="{% url 'two_factor:profile' %}" class="btn">{% trans "Back to Account Security" %}</a>
+    {% if phone_methods %}
+      <a href="{% url 'two_factor:phone_create' %}"
+         class="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold dark:border-gray-800">
+        {% trans "Add Phone Number" %}
+      </a>
+    {% endif %}
+  </div>
+{% endblock %}

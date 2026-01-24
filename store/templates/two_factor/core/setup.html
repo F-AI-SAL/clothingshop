@@ -1,0 +1,47 @@
+{% extends "two_factor/_base.html" %}
+{% load i18n %}
+
+{% block two_factor_content %}
+  <h1 class="text-2xl font-semibold">Enable Two-Factor Authentication</h1>
+  {% if wizard.steps.current == 'welcome' %}
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      Secure your admin account with a second layer of protection.
+    </p>
+  {% elif wizard.steps.current == 'method' %}
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      Choose your preferred verification method.
+    </p>
+  {% elif wizard.steps.current == 'generator' %}
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      Scan this QR code with Google Authenticator or any TOTP app.
+    </p>
+    <div class="my-4 rounded-xl border bg-white p-4 text-center dark:border-gray-800">
+      <img src="{{ QR_URL }}" alt="QR Code" class="mx-auto">
+    </div>
+    <p class="text-sm text-gray-600 dark:text-gray-300">
+      TOTP Secret: <a href="{{ otpauth_url }}" class="font-semibold underline">{{ secret_key }}</a>
+    </p>
+    <p class="text-sm text-gray-600 dark:text-gray-300">Then enter the token from your app.</p>
+  {% elif wizard.steps.current == 'sms' %}
+    <p class="text-sm text-gray-600 dark:text-gray-300">Enter the phone number for SMS verification.</p>
+  {% elif wizard.steps.current == 'call' %}
+    <p class="text-sm text-gray-600 dark:text-gray-300">Enter the phone number for voice call verification.</p>
+  {% elif wizard.steps.current == 'validation' %}
+    {% if challenge_succeeded %}
+      <p class="text-sm text-gray-600 dark:text-gray-300">Enter the code you received.</p>
+    {% else %}
+      <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        Verification failed. Please retry or choose another method.
+      </div>
+    {% endif %}
+  {% elif wizard.steps.current == 'yubikey' %}
+    <p class="text-sm text-gray-600 dark:text-gray-300">Insert your YubiKey and touch it to verify.</p>
+  {% endif %}
+
+  <form action="" method="post" class="mt-6 space-y-4">
+    {% csrf_token %}
+    {% include "two_factor/_wizard_forms.html" %}
+    <input type="submit" value="" hidden />
+    {% include "two_factor/_wizard_actions.html" %}
+  </form>
+{% endblock %}

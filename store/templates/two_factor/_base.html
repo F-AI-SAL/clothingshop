@@ -1,0 +1,124 @@
+{% extends "store/base.html" %}
+
+{% block content %}
+<section class="bg-white dark:bg-black">
+  <div class="mx-auto max-w-xl px-4 py-10 two-factor-ui">
+    <div class="rounded-2xl border bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-neutral-950">
+      {% block two_factor_content %}{% endblock %}
+    </div>
+  </div>
+</section>
+
+<style>
+  .two-factor-ui h1,
+  .two-factor-ui h2,
+  .two-factor-ui h3 {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+  .two-factor-ui p {
+    color: #4b5563;
+    margin-bottom: 0.75rem;
+  }
+  .two-factor-ui label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 0.25rem;
+  }
+  .two-factor-ui input[type="text"],
+  .two-factor-ui input[type="email"],
+  .two-factor-ui input[type="password"],
+  .two-factor-ui input[type="number"],
+  .two-factor-ui input[type="tel"],
+  .two-factor-ui select,
+  .two-factor-ui textarea {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    background: transparent;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .two-factor-ui input:focus,
+  .two-factor-ui select:focus,
+  .two-factor-ui textarea:focus {
+    border-color: #111827;
+    box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.12);
+  }
+  .two-factor-ui button,
+  .two-factor-ui input[type="submit"],
+  .two-factor-ui .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    padding: 0.6rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: #111827;
+    color: #fff;
+    border: none;
+    transition: transform 0.15s ease, background 0.2s ease;
+  }
+  .two-factor-ui button:hover,
+  .two-factor-ui input[type="submit"]:hover,
+  .two-factor-ui .btn:hover {
+    background: #0f172a;
+    transform: translateY(-1px);
+  }
+  .two-factor-ui .secondary-action a {
+    font-size: 0.875rem;
+    color: #111827;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .two-factor-ui .errorlist {
+    margin: 0 0 0.5rem 0;
+    padding: 0;
+    list-style: none;
+    color: #dc2626;
+    font-size: 0.875rem;
+  }
+  .two-factor-ui .helptext {
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+  @media (prefers-color-scheme: dark) {
+    .two-factor-ui p,
+    .two-factor-ui label,
+    .two-factor-ui .helptext {
+      color: #9ca3af;
+    }
+    .two-factor-ui input[type="text"],
+    .two-factor-ui input[type="email"],
+    .two-factor-ui input[type="password"],
+    .two-factor-ui input[type="number"],
+    .two-factor-ui input[type="tel"],
+    .two-factor-ui select,
+    .two-factor-ui textarea {
+      border-color: #1f2937;
+    }
+    .two-factor-ui input:focus,
+    .two-factor-ui select:focus,
+    .two-factor-ui textarea:focus {
+      border-color: #f9fafb;
+      box-shadow: 0 0 0 3px rgba(249, 250, 251, 0.15);
+    }
+    .two-factor-ui button,
+    .two-factor-ui input[type="submit"],
+    .two-factor-ui .btn {
+      background: #f9fafb;
+      color: #111827;
+    }
+    .two-factor-ui button:hover,
+    .two-factor-ui input[type="submit"]:hover,
+    .two-factor-ui .btn:hover {
+      background: #e5e7eb;
+    }
+  }
+</style>
+{% endblock %}
