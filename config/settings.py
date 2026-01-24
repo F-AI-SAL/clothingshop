@@ -27,6 +27,11 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-wdk*%-2hq%581ha)0ec57o$^t+
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
+render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
+if render_host:
+    ALLOWED_HOSTS.append(render_host)
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
 # Application definition
