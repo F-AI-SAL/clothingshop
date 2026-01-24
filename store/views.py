@@ -18,6 +18,7 @@ from .models import (
     OrderItem,
     ProductVariant,
     Coupon,
+    PaymentTransaction,
 )
 
 from .cart import (
@@ -192,11 +193,17 @@ def checkout(request):
         postal_code = request.POST.get("postal_code", "").strip()
 
         payment_method = request.POST.get("payment_method", "cod")
+        payment_reference = (request.POST.get("payment_reference") or "").strip()
+        payment_proof = request.FILES.get("payment_proof")
         notes = request.POST.get("notes", "").strip()
 
         if not full_name or not phone or not address:
             messages.error(request, "Please fill Full name, Phone and Address.")
             return redirect("store:checkout")
+        if payment_method in ("bkash", "nagad", "bank"):
+            if not payment_reference or not payment_proof:
+                messages.error(request, "Please add transaction ID and payment screenshot.")
+                return redirect("store:checkout")
 
         # ✅ Create order
         order = Order.objects.create(
@@ -230,6 +237,14 @@ def checkout(request):
                 color=it.get("color") or "",
                 size=it.get("size") or "",
             )
+
+        PaymentTransaction.objects.create(
+            order=order,
+            method=payment_method,
+            amount=total,
+            reference_id=payment_reference,
+            proof_image=payment_proof,
+        )
 
         if coupon_obj:
             Coupon.objects.filter(id=coupon_obj.id).update(used_count=F("used_count") + 1)

@@ -28,6 +28,26 @@
       }
     }
   </script>
+
+  {% if site_settings and site_settings.meta_pixel_enabled and site_settings.meta_pixel_id %}
+  <!-- Meta Pixel -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '{{ site_settings.meta_pixel_id }}');
+    fbq('track', 'PageView');
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none"
+         src="https://www.facebook.com/tr?id={{ site_settings.meta_pixel_id }}&ev=PageView&noscript=1"/>
+  </noscript>
+  {% endif %}
 </head>
 
 <body class="bg-white text-gray-900 dark:bg-black dark:text-gray-100 transition-colors duration-300">
@@ -40,12 +60,29 @@
 
       <!-- Logo -->
       <a href="/" class="shrink-0 leading-none">
-        <div class="font-serif text-lg font-bold tracking-wide">LA ROSA</div>
-        <div class="text-xs tracking-[0.25em] text-gray-500 dark:text-gray-400">FORMALS</div>
+        {% if site_settings and site_settings.logo %}
+          <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.brand_name }}" class="h-10 w-auto">
+        {% else %}
+          <div class="font-serif text-lg font-bold tracking-wide">
+            {{ site_settings.brand_name|default:"LA ROSA" }}
+          </div>
+          <div class="text-xs tracking-[0.25em] text-gray-500 dark:text-gray-400">
+            {{ site_settings.brand_tagline|default:"FORMALS" }}
+          </div>
+        {% endif %}
       </a>
 
       <!-- Desktop Nav -->
       <nav class="hidden lg:flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300">
+        {% for link in nav_links_header %}
+          <a href="{{ link.url }}"
+             class="px-3 py-2 rounded-lg font-medium transition
+                    hover:bg-gray-100 dark:hover:bg-gray-900
+                    hover:text-black dark:hover:text-white"
+             {% if link.open_new_tab %}target="_blank" rel="noopener"{% endif %}>
+            {{ link.label }}
+          </a>
+        {% endfor %}
         {% for parent in nav_parents %}
           <div class="relative group">
             <a href="#"
@@ -167,8 +204,16 @@
   <!-- Drawer Header -->
   <div class="flex items-center justify-between px-5 h-16 border-b dark:border-gray-800">
     <div class="leading-none">
-      <div class="font-serif text-base font-bold tracking-wide">LA ROSA</div>
-      <div class="text-[10px] tracking-[0.25em] text-gray-500 dark:text-gray-400">FORMALS</div>
+      {% if site_settings and site_settings.logo %}
+        <img src="{{ site_settings.logo.url }}" alt="{{ site_settings.brand_name }}" class="h-8 w-auto">
+      {% else %}
+        <div class="font-serif text-base font-bold tracking-wide">
+          {{ site_settings.brand_name|default:"LA ROSA" }}
+        </div>
+        <div class="text-[10px] tracking-[0.25em] text-gray-500 dark:text-gray-400">
+          {{ site_settings.brand_tagline|default:"FORMALS" }}
+        </div>
+      {% endif %}
     </div>
 
     <button id="drawerCloseBtn"
@@ -253,6 +298,14 @@
 
     <!-- Extra links -->
     <div class="mt-8 space-y-2 text-sm">
+      {% for link in nav_links_mobile %}
+        <a href="{{ link.url }}"
+           class="block rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800
+                  hover:bg-gray-50 dark:hover:bg-gray-900 transition"
+           {% if link.open_new_tab %}target="_blank" rel="noopener"{% endif %}>
+          {{ link.label }}
+        </a>
+      {% endfor %}
       <a href="{% url 'store:product_list' %}"
          class="block rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800
                 hover:bg-gray-50 dark:hover:bg-gray-900 transition">
@@ -266,7 +319,7 @@
     </div>
 
     <div class="mt-8 text-xs text-gray-500 dark:text-gray-400">
-      © {% now "Y" %} La Rosa Formals
+      © {% now "Y" %} {{ site_settings.brand_name|default:"La Rosa Formals" }}
     </div>
   </div>
 </aside>
@@ -297,10 +350,17 @@
 
     <div>
       <h4 class="text-sm font-semibold mb-4">Quick Links</h4>
-      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">FAQ</a>
-      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">How To Order</a>
-      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">About Us</a>
-      <a href="#" class="block text-sm text-gray-400 hover:text-white transition">Contact Us</a>
+      {% for link in nav_links_footer %}
+        <a href="{{ link.url }}" class="block text-sm text-gray-400 hover:text-white transition"
+           {% if link.open_new_tab %}target="_blank" rel="noopener"{% endif %}>
+          {{ link.label }}
+        </a>
+      {% empty %}
+        <a href="#" class="block text-sm text-gray-400 hover:text-white transition">FAQ</a>
+        <a href="#" class="block text-sm text-gray-400 hover:text-white transition">How To Order</a>
+        <a href="#" class="block text-sm text-gray-400 hover:text-white transition">About Us</a>
+        <a href="#" class="block text-sm text-gray-400 hover:text-white transition">Contact Us</a>
+      {% endfor %}
     </div>
 
     <div>
@@ -357,7 +417,7 @@
             {{ message|safe }}
           </div>
           <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            La Rosa Formals
+            {{ site_settings.brand_name|default:"La Rosa Formals" }}
           </div>
         </div>
 
