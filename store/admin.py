@@ -278,29 +278,6 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
         self.message_user(request, f"{updated} order(s) anonymized.")
     anonymize_orders.short_description = "GDPR: anonymize selected orders"
 
-    def quick_actions(self, obj):
-        actions = [
-            ("accepted", "Accept", "#2563eb"),
-            ("processing", "Process", "#0ea5e9"),
-            ("packaging", "Pack", "#7c3aed"),
-            ("shipped", "Ship", "#10b981"),
-            ("cancelled", "Cancel", "#ef4444"),
-            ("refunded", "Refund", "#6b7280"),
-        ]
-        links = []
-        for status, label, color in actions:
-            url = reverse("admin:store_order_quick_status", args=[obj.id, status])
-            links.append(
-                format_html(
-                    '<a href="{}" style="background:{};color:#fff;padding:2px 6px;border-radius:6px;font-size:11px;margin-right:4px;">{}</a>',
-                    url,
-                    color,
-                    label,
-                )
-            )
-        return mark_safe("".join(links))
-    quick_actions.short_description = "Quick Actions"
-
     def view_order(self, obj):
         url = reverse("admin:store_order_change", args=[obj.id])
         return format_html(
@@ -308,6 +285,27 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
             url,
         )
     view_order.short_description = "Details"
+
+    def quick_actions(self, obj):
+        url = reverse("admin:store_order_quick_status", args=[obj.id])
+        csrf_token = self._get_csrf_token()
+        next_url = getattr(self, "_changelist_path", reverse("admin:store_order_changelist"))
+        return format_html(
+            '<form action="{}" method="post" style="display:flex;gap:4px;flex-wrap:wrap;">'
+            '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
+            '<input type="hidden" name="next" value="{}" />'
+            '<button name="status" value="accepted" style="background:#2563eb;color:#fff;padding:2px 6px;border-radius:6px;font-size:11px;border:none;">Accept</button>'
+            '<button name="status" value="processing" style="background:#0ea5e9;color:#fff;padding:2px 6px;border-radius:6px;font-size:11px;border:none;">Process</button>'
+            '<button name="status" value="packaging" style="background:#7c3aed;color:#fff;padding:2px 6px;border-radius:6px;font-size:11px;border:none;">Pack</button>'
+            '<button name="status" value="shipped" style="background:#10b981;color:#fff;padding:2px 6px;border-radius:6px;font-size:11px;border:none;">Ship</button>'
+            '<button name="status" value="cancelled" style="background:#ef4444;color:#fff;padding:2px 6px;border-radius:6px;font-size:11px;border:none;">Cancel</button>'
+            '<button name="status" value="refunded" style="background:#6b7280;color:#fff;padding:2px 6px;border-radius:6px;font-size:11px;border:none;">Refund</button>'
+            '</form>',
+            url,
+            csrf_token,
+            next_url,
+        )
+    quick_actions.short_description = "Quick Actions"
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -317,23 +315,38 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
         urls = super().get_urls()
         custom = [
             path(
-                "<int:order_id>/status/<str:status>/",
+                "<int:order_id>/status/",
                 self.admin_site.admin_view(self.quick_status_view),
                 name="store_order_quick_status",
             ),
         ]
         return custom + urls
 
-    def quick_status_view(self, request, order_id, status):
+    def quick_status_view(self, request, order_id):
+        if request.method != "POST":
+            return redirect(reverse("admin:store_order_changelist"))
         valid = {key for key, _ in Order.STATUS_CHOICES}
+        status = request.POST.get("status")
         if status not in valid:
             self.message_user(request, "Invalid status.", level=messages.ERROR)
-            return redirect(request.META.get("HTTP_REFERER", ""))
+            return redirect(request.POST.get("next") or reverse("admin:store_order_changelist"))
         order = get_object_or_404(Order, id=order_id)
         if order.status != status:
             order.status = status
             order.save(update_fields=["status"])
-        return redirect(request.META.get("HTTP_REFERER", ""))
+        return redirect(request.POST.get("next") or reverse("admin:store_order_changelist"))
+
+    def _get_csrf_token(self):
+        from django.middleware.csrf import get_token
+        request = getattr(self, "_request_for_csrf", None)
+        if not request:
+            return ""
+        return get_token(request)
+
+    def changelist_view(self, request, extra_context=None):
+        self._request_for_csrf = request
+        self._changelist_path = request.get_full_path()
+        return super().changelist_view(request, extra_context=extra_context)
 
     def _ensure_payment(self, order):
         if hasattr(order, "payment"):
