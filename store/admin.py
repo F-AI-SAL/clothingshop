@@ -31,87 +31,44 @@ from .models import (
     NavLink,
     ConsentRecord,
     GdprRequest,
+    PaymentProviderConfig,
+    CourierProviderConfig,
+    MessagingConfig,
+    PaymentWebhookEvent,
+    PaymentReconciliationReport,
+    MessageTemplate,
 )
 
 
-# ============================================================
-# OPTIONAL: Admin Dashboard (works only if you wire custom site)
-# ============================================================
-class StoreAdminSite(admin.AdminSite):
-    site_header = "La Rosa Admin"
-    site_title = "La Rosa Admin"
-    index_title = "Dashboard"
-
-    def get_urls(self):
-        urls = super().get_urls()
-        extra = [
-            path("dashboard/", self.admin_view(self.dashboard_view), name="store-dashboard"),
-        ]
-        return extra + urls
-
-    def dashboard_view(self, request):
-        now = timezone.now()
-        start = now - timedelta(days=7)
-
-        revenue_7d = Order.objects.filter(created_at__gte=start).aggregate(s=Sum("total"))["s"] or 0
-        orders_7d = Order.objects.filter(created_at__gte=start).count()
-
-        by_status = list(
-            Order.objects.values("status").annotate(c=Count("id")).order_by("-c")
-        )
-
-        top_products = list(
-            OrderItem.objects.values("product__title")
-            .annotate(q=Sum("qty"))
-            .order_by("-q")[:8]
-        )
-
-        return TemplateResponse(request, "admin/store/dashboard.html", {
-            "revenue_7d": revenue_7d,
-            "orders_7d": orders_7d,
-            "by_status": by_status,
-            "top_products": top_products,
-        })
-
-
-# =========================
-# PRODUCT IMAGES INLINE
-# =========================
-class ProductImageInline(admin.TabularInline):
-    model = ProductImage
-    extra = 3
-    fields = ("image", "alt_text", "sort_order")
-    ordering = ("sort_order",)
-
-# =========================
-# ORDER INLINE
-# =========================
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
-    readonly_fields = ("product", "qty", "price", "line_total", "color", "size")
-    can_delete = False
+    fields = ("product", "qty", "price", "color", "size", "line_total")
+    readonly_fields = ("line_total",)
 
 
 class PaymentInline(admin.StackedInline):
     model = PaymentTransaction
     extra = 0
     max_num = 1
-    can_delete = False
-    readonly_fields = ("created_at", "verified_at")
 
 
-class ShipmentInline(admin.TabularInline):
+class ShipmentInline(admin.StackedInline):
     model = Shipment
     extra = 0
-    readonly_fields = ("created_at",)
 
 
 class ManualNotificationInline(admin.TabularInline):
     model = ManualNotificationLog
     extra = 0
-    readonly_fields = ("created_at", "sent_at", "sent_by")
-    can_delete = False
+    readonly_fields = ("sent_by", "sent_at", "created_at")
+
+
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
+    fields = ("image", "alt_text", "sort_order")
+    sortable_field_name = "sort_order"
 
 
 class OrderResource(resources.ModelResource):
@@ -167,17 +124,24 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
         "create_shipment",
         "send_sms_notification",
         "send_whatsapp_notification",
+        "resend_email",
         "anonymize_orders",
     ]
 
     def _mark_status(self, request, queryset, status_key, label):
         updated = 0
+        skipped = 0
         for order in queryset:
             if order.status == status_key:
+                continue
+            if not order.is_valid_transition(status_key):
+                skipped += 1
                 continue
             order.status = status_key
             order.save(update_fields=["status"])
             updated += 1
+        if skipped:
+            self.message_user(request, f"{skipped} order(s) skipped due to invalid transition.", level=messages.WARNING)
         self.message_user(request, f"{updated} order(s) marked as {label}.")
 
     def mark_as_accepted(self, request, queryset):
@@ -279,6 +243,18 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
     anonymize_orders.short_description = "GDPR: anonymize selected orders"
 
     def view_order(self, obj):
+        url = reverse("admin:store_order_detail", args=[obj.id])
+        return format_html(
+            '<a href="{}" style="padding:2px 6px;border-radius:6px;border:1px solid #e5e7eb;font-size:11px;">Details</a>',
+            url,
+        )
+    view_order.short_description = "Details"
+
+    def order_detail_view(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id)
+        return TemplateResponse(request, "admin/store/order_detail.html", {"order": order})
+
+    def view_order(self, obj):
         url = reverse("admin:store_order_change", args=[obj.id])
         return format_html(
             '<a href="{}" style="padding:2px 6px;border-radius:6px;border:1px solid #e5e7eb;font-size:11px;">View</a>',
@@ -332,6 +308,9 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
             return redirect(request.POST.get("next") or reverse("admin:store_order_changelist"))
         order = get_object_or_404(Order, id=order_id)
         if order.status != status:
+            if not order.is_valid_transition(status):
+                self.message_user(request, "Invalid status transition.", level=messages.ERROR)
+                return redirect(request.POST.get("next") or reverse("admin:store_order_changelist"))
             order.status = status
             order.save(update_fields=["status"])
         return redirect(request.POST.get("next") or reverse("admin:store_order_changelist"))
@@ -405,7 +384,7 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
     def _log_manual_notification(self, request, queryset, channel):
         updated = 0
         for order in queryset:
-            message = f"Order #{order.id} status: {order.get_status_display()}, total PKR {order.total}."
+            message = f"Order #{order.id} status: {order.get_status_display()}, total BDT {order.total}."
             ManualNotificationLog.objects.create(
                 order=order,
                 channel=channel,
@@ -425,6 +404,17 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
     def send_whatsapp_notification(self, request, queryset):
         self._log_manual_notification(request, queryset, "whatsapp")
     send_whatsapp_notification.short_description = "Log manual WhatsApp notification as sent"
+
+    def resend_email(self, request, queryset):
+        updated = 0
+        for order in queryset:
+            if not order.email:
+                continue
+            from .emails import send_order_created_notifications
+            send_order_created_notifications(order)
+            updated += 1
+        self.message_user(request, f"{updated} email(s) sent.")
+    resend_email.short_description = "Resend order confirmation email"
 
 
 @admin.register(CourierSettings)
@@ -546,7 +536,7 @@ class ProductAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
     )
 
     class Media:
-        js = ("store/admin/sortable.js",)
+        js = ("store/admin/sortable.min.js", "store/admin/sortable.js")
 
     def stock_summary(self, obj):
         variants = obj.variants.all()
@@ -663,3 +653,49 @@ class LogEntryAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(PaymentProviderConfig)
+class PaymentProviderConfigAdmin(SimpleHistoryAdmin):
+    list_display = ("provider", "is_live", "updated_at")
+    list_filter = ("provider", "is_live")
+
+
+@admin.register(CourierProviderConfig)
+class CourierProviderConfigAdmin(SimpleHistoryAdmin):
+    list_display = ("provider", "is_active", "updated_at")
+    list_filter = ("provider", "is_active")
+
+
+@admin.register(MessagingConfig)
+class MessagingConfigAdmin(SimpleHistoryAdmin):
+    list_display = ("sms_provider", "whatsapp_provider", "updated_at")
+
+
+@admin.register(PaymentWebhookEvent)
+class PaymentWebhookEventAdmin(SimpleHistoryAdmin):
+    list_display = ("provider", "event_id", "received_at")
+    search_fields = ("provider", "event_id")
+
+
+
+@admin.register(PaymentReconciliationReport)
+class PaymentReconciliationReportAdmin(SimpleHistoryAdmin):
+    list_display = ("run_at", "total_pending", "reconciled", "failed")
+    ordering = ("-run_at",)
+
+
+
+@admin.register(MessageTemplate)
+class MessageTemplateAdmin(SimpleHistoryAdmin):
+    list_display = ("channel", "event", "is_active", "preview_email")
+    list_filter = ("channel", "event", "is_active")
+    search_fields = ("subject", "body")
+
+    def preview_email(self, obj):
+        if obj.channel != "email":
+            return "-"
+        url = reverse("admin:store_message_template_preview", args=[obj.id])
+        return format_html("<a href=\"{}\">Preview</a>", url)
+    preview_email.short_description = "Preview"
+

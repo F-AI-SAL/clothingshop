@@ -1,5 +1,7 @@
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
-from django.core.mail import send_mail
+from .models import MessageTemplate
+
 
 
 DEFAULT_FROM_EMAIL = getattr(settings, "DEFAULT_FROM_EMAIL", "La Rosa <noreply@larosa.local>")
@@ -81,3 +83,37 @@ def send_status_update_notification(order, previous_status=None):
     ]
 
     _safe_send(f"[La Rosa] Order #{order.id} status updated", "\n".join(body_lines), [order.email])
+
+
+def render_email_template(event, order):
+    template = MessageTemplate.objects.filter(channel="email", event=event, is_active=True).first()
+    if not template:
+        return None, None
+    subject = template.subject or f"Order #{order.id}"
+    body = template.body
+    body = body.replace("{order_id}", str(order.id))
+    body = body.replace("{status}", order.get_status_display())
+    body = body.replace("{total}", str(order.total))
+    return subject, body
+
+
+def send_order_created_notifications(order):
+    subject, body = render_email_template("order_placed", order)
+    if not subject:
+        subject = f"Order #{order.id} received"
+        body = f"Thanks for your order. Status: {order.get_status_display()}"
+    email = EmailMultiAlternatives(subject, body, settings.DEFAULT_FROM_EMAIL, [order.email])
+    if body and "<" in body and ">" in body:
+        email.attach_alternative(body, "text/html")
+    email.send(fail_silently=True)
+
+
+def send_status_update_notification(order, previous_status=None):
+    subject, body = render_email_template("order_status_updated", order)
+    if not subject:
+        subject = f"Order #{order.id} status update"
+        body = f"Your order status is now {order.get_status_display()}"
+    email = EmailMultiAlternatives(subject, body, settings.DEFAULT_FROM_EMAIL, [order.email])
+    if body and "<" in body and ">" in body:
+        email.attach_alternative(body, "text/html")
+    email.send(fail_silently=True)

@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Invoice {{ order.id }}</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #111; }
+    .header { display: flex; justify-content: space-between; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border: 1px solid #ddd; padding: 8px; font-size: 13px; }
+    th { background: #f5f5f5; text-align: left; }
+    .totals { margin-top: 12px; width: 320px; float: right; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h2>{{ site_settings.brand_name|default:"La Rosa" }}</h2>
+      <div>{{ site_settings.brand_tagline }}</div>
+    </div>
+    <div>
+      <div>Invoice: {{ order.invoice_no|default:order.id }}</div>
+      <div>Date: {{ order.created_at|date:"Y-m-d" }}</div>
+    </div>
+  </div>
+
+  <h3>Customer</h3>
+  <div>{{ order.full_name }}</div>
+  <div>{{ order.phone }}</div>
+  <div>{{ order.address }}</div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in order.items.all %}
+      <tr>
+        <td>{{ item.product.title }}{% if item.color %} ({{ item.color }}){% endif %}{% if item.size %} / {{ item.size }}{% endif %}</td>
+        <td>{{ item.qty }}</td>
+        <td>{{ item.price }}</td>
+        <td>{{ item.line_total }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><th>Subtotal</th><td>{{ order.subtotal }}</td></tr>
+    <tr><th>VAT ({{ order.vat_rate }}%)</th><td>{{ order.vat_amount }}</td></tr>
+    <tr><th>COD Charge</th><td>{{ order.cod_charge }}</td></tr>
+    <tr><th>Total</th><td>{{ order.total }}</td></tr>
+  </table>
+</body>
+</html>

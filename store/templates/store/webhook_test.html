@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h2>Webhook Signature Test</h2>
+<form method="post">
+  {% csrf_token %}
+  <p>Paste payload and signature to test verification.</p>
+  <label>Provider</label>
+  <select name="provider">
+    <option value="bkash">bKash</option>
+    <option value="nagad">Nagad</option>
+    <option value="bank">Bank</option>
+  </select>
+  <br/><br/>
+  <label>Signature Header</label><br/>
+  <input type="text" name="signature" style="width:60%" />
+  <br/><br/>
+  <label>Payload (JSON)</label><br/>
+  <textarea name="payload" rows="8" style="width:80%"></textarea>
+  <br/><br/>
+  <button type="submit" class="default">Test</button>
+</form>
+{% if result %}
+  <p>Result: {{ result }}</p>
+{% endif %}
+{% endblock %}

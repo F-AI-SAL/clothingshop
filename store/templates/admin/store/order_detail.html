@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h2>Order #{{ order.id }} - {{ order.full_name }}</h2>
+<p>Status: <strong>{{ order.get_status_display }}</strong></p>
+<p>Phone: {{ order.phone }} | Email: {{ order.email }}</p>
+<p>Address: {{ order.address }}, {{ order.city }} {{ order.area }} {{ order.postal_code }}</p>
+
+<h3>Items</h3>
+<table class="listing">
+  <thead>
+    <tr>
+      <th>Product</th>
+      <th>Variant</th>
+      <th>Qty</th>
+      <th>Price</th>
+      <th>Total</th>
+      <th>Image</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in order.items.all %}
+    <tr>
+      <td>{{ item.product.title }}</td>
+      <td>{% if item.color %}{{ item.color }}{% endif %} {% if item.size %}/ {{ item.size }}{% endif %}</td>
+      <td>{{ item.qty }}</td>
+      <td>{{ item.price }}</td>
+      <td>{{ item.line_total }}</td>
+      <td>
+        {% with img=item.product.images.first %}
+          {% if img %}<img src="{{ img.image.url }}" style="height:48px;width:48px;object-fit:cover;border-radius:6px;" />{% endif %}
+        {% endwith %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h3>Payment</h3>
+{% if order.payment %}
+  <p>Method: {{ order.payment.get_method_display }} | Status: {{ order.payment.get_status_display }}</p>
+{% else %}
+  <p>No payment record.</p>
+{% endif %}
+
+{% endblock %}

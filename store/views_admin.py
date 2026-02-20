@@ -42,3 +42,11 @@ def admin_dashboard(request):
         "pending_orders": pending_orders,
         "admin_orders_url": admin_orders_url,
     })
+
+
+@staff_member_required
+def webhook_test(request):
+    # simple page with inputs for signature verification testing
+    if request.method == "POST":
+        return render(request, "store/webhook_test.html", {"result": "sent"})
+    return render(request, "store/webhook_test.html", {})

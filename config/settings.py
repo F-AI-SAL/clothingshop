@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 from urllib.parse import urlparse
+from celery.schedules import crontab
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -126,6 +127,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'store.middleware.RateLimitMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware',
@@ -138,6 +140,19 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+
+
+RATE_LIMIT_ALLOWLIST = [ip.strip() for ip in os.getenv("RATE_LIMIT_ALLOWLIST", "").split(",") if ip.strip()]
+
+RATE_LIMITS = {
+    "enabled": os.getenv("RATE_LIMIT_ENABLED", "True").lower() == "true",
+    "paths": [
+        {"path": "/account/login/", "limit": 10, "window": 60},
+        {"path": "/admin/login/", "limit": 10, "window": 60},
+        {"path": "/checkout/", "limit": 20, "window": 60},
+    ],
+}
+
 
 TEMPLATES = [
     {
@@ -207,9 +222,6 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
-    {
-        'NAME': 'django.contrib.auth.password_validation.PasswordChangeValidator',
-    },
 ]
 
 
@@ -219,6 +231,12 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
+
+# Commerce config
+VAT_RATE = float(os.getenv("VAT_RATE", "0"))
+COD_CHARGE = float(os.getenv("COD_CHARGE", "0"))
+COD_CONFIRMATION_REQUIRED = os.getenv("COD_CONFIRMATION_REQUIRED", "False").lower() == "true"
+
 
 USE_I18N = True
 
@@ -288,15 +306,24 @@ else:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", "True").lower() == "true"
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
 SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "True").lower() == "true"
 CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "True").lower() == "true"
+
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
 SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", "True").lower() == "true"
 SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "True").lower() == "true"
 SECURE_REFERRER_POLICY = os.getenv("SECURE_REFERRER_POLICY", "same-origin")
 X_FRAME_OPTIONS = "DENY"
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin"
+SECURE_CROSS_ORIGIN_RESOURCE_POLICY = "same-origin"
+SESSION_COOKIE_HTTPONLY = True
 
 ADMIN_IP_ALLOWLIST = [ip.strip() for ip in os.getenv("ADMIN_IP_ALLOWLIST", "").split(",") if ip.strip()]
+TRUSTED_PROXY_IPS = [ip.strip() for ip in os.getenv("TRUSTED_PROXY_IPS", "").split(",") if ip.strip()]
 
 CONTENT_SECURITY_POLICY = {
     "DIRECTIVES": {

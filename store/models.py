@@ -1,10 +1,23 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from simple_history.models import HistoricalRecords
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from django.utils.text import slugify
 from django.utils import timezone
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+def _unique_slug(model, value, slug_field="slug"):
+    base = slugify(value) or "item"
+    slug = base
+    counter = 2
+    while model.objects.filter(**{slug_field: slug}).exists():
+        slug = f"{base}-{counter}"
+        counter += 1
+    return slug
 
 
 # =========================
@@ -19,7 +32,7 @@ class Category(models.Model):
     image = models.ImageField(upload_to="categories/", blank=True, null=True)
     tagline = models.CharField(max_length=120, blank=True)
 
-    # Parent → child (Mega menu support)
+    # Parent -> child (Mega menu support)
     parent = models.ForeignKey(
         "self",
         on_delete=models.CASCADE,
@@ -36,12 +49,12 @@ class Category(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.name)
+            self.slug = _unique_slug(Category, self.name)
         super().save(*args, **kwargs)
 
     def __str__(self):
         if self.parent:
-            return f"{self.parent.name} → {self.name}"
+            return f"{self.parent.name} -> {self.name}"
         return self.name
 
 
@@ -63,7 +76,11 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True)
 
-    # Simple variants (later normalize করা যাবে)
+    meta_title = models.CharField(max_length=200, blank=True)
+    meta_description = models.CharField(max_length=300, blank=True)
+    og_image = models.ImageField(upload_to="seo/", blank=True, null=True)
+
+    # Simple variants (later normalize)
     colors = models.CharField(
         max_length=200,
         blank=True,
@@ -78,6 +95,12 @@ class Product(models.Model):
     is_active = models.BooleanField(default=True)
     is_new = models.BooleanField(default=False)
 
+    invoice_no = models.CharField(max_length=30, blank=True)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_confirmed = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -85,7 +108,7 @@ class Product(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            self.slug = slugify(self.title)
+            self.slug = _unique_slug(Product, self.title)
         super().save(*args, **kwargs)
 
     def color_list(self):
@@ -150,6 +173,12 @@ class HomeBanner(models.Model):
     button_link = models.CharField(max_length=200, default="/products/")
 
     is_active = models.BooleanField(default=True)
+    invoice_no = models.CharField(max_length=30, blank=True)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_confirmed = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -175,6 +204,12 @@ class FeaturedBanner(models.Model):
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=0)
 
+    invoice_no = models.CharField(max_length=30, blank=True)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_confirmed = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -195,6 +230,23 @@ class Order(models.Model):
         ("refunded", "Refunded"),
     )
 
+    ALLOWED_TRANSITIONS = {
+        "pending": {"accepted", "cancelled"},
+        "accepted": {"processing", "cancelled"},
+        "processing": {"packaging", "cancelled"},
+        "packaging": {"shipped", "cancelled"},
+        "shipped": {"delivered", "cancelled"},
+        "delivered": set(),
+        "cancelled": {"refunded"},
+        "refunded": set(),
+    }
+
+    def is_valid_transition(self, new_status):
+        if new_status == self.status:
+            return True
+        return new_status in self.ALLOWED_TRANSITIONS.get(self.status, set())
+
+
     full_name = models.CharField(max_length=120)
     phone = models.CharField(max_length=30)
     email = models.EmailField(blank=True)
@@ -213,6 +265,12 @@ class Order(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+
+    invoice_no = models.CharField(max_length=30, blank=True)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_confirmed = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -270,6 +328,12 @@ class PaymentTransaction(models.Model):
     verified_at = models.DateTimeField(blank=True, null=True)
     notes = models.TextField(blank=True)
 
+    invoice_no = models.CharField(max_length=30, blank=True)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_confirmed = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -289,6 +353,10 @@ class CourierSettings(models.Model):
     api_key = models.CharField(max_length=200, blank=True)
     api_secret = models.CharField(max_length=200, blank=True)
     base_url = models.URLField(blank=True)
+    token_url = models.URLField(blank=True)
+    verify_url = models.URLField(blank=True)
+    refund_url = models.URLField(blank=True)
+    access_token = models.CharField(max_length=400, blank=True)
     is_active = models.BooleanField(default=True)
 
     updated_at = models.DateTimeField(auto_now=True)
@@ -315,6 +383,12 @@ class Shipment(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="created")
     label_url = models.URLField(blank=True)
     metadata = models.JSONField(blank=True, null=True)
+
+    invoice_no = models.CharField(max_length=30, blank=True)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_confirmed = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -346,6 +420,12 @@ class ManualNotificationLog(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="queued")
     sent_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, blank=True, null=True)
     sent_at = models.DateTimeField(blank=True, null=True)
+
+    invoice_no = models.CharField(max_length=30, blank=True)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_confirmed = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -414,6 +494,12 @@ class ConsentRecord(models.Model):
     consent_type = models.CharField(max_length=20, choices=CONSENT_CHOICES)
     is_granted = models.BooleanField(default=True)
     source = models.CharField(max_length=120, blank=True, help_text="signup, checkout, popup, etc.")
+    invoice_no = models.CharField(max_length=30, blank=True)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_confirmed = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -441,6 +527,12 @@ class GdprRequest(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     notes = models.TextField(blank=True)
     completed_at = models.DateTimeField(blank=True, null=True)
+    invoice_no = models.CharField(max_length=30, blank=True)
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    cod_confirmed = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -474,7 +566,7 @@ class Coupon(models.Model):
 
 
 @receiver(pre_save, sender=Order)
-def _notify_order_status_change(sender, instance, **kwargs):
+def _store_previous_order_status(sender, instance, **kwargs):
     if not instance.pk:
         return
 
@@ -483,9 +575,155 @@ def _notify_order_status_change(sender, instance, **kwargs):
     except Order.DoesNotExist:
         return
 
-    if previous.status == instance.status:
+    instance._previous_status = previous.status
+
+
+@receiver(post_save, sender=Order)
+def _notify_order_status_change(sender, instance, **kwargs):
+    previous_status = getattr(instance, "_previous_status", None)
+    if not previous_status or previous_status == instance.status:
         return
 
     from .emails import send_status_update_notification
+    from .notifications.dispatch import send_sms, send_whatsapp
 
-    send_status_update_notification(instance, previous_status=previous.get_status_display())
+    def _send_notification():
+        try:
+            display = dict(Order.STATUS_CHOICES).get(previous_status, previous_status)
+            send_status_update_notification(instance, previous_status=display)
+            send_sms(instance, f"Order status updated to {instance.get_status_display()}")
+            send_whatsapp(instance, "order_status_updated", {"status": instance.get_status_display()})
+        except Exception:
+            logger.exception("Failed to send status update notification for order %s", instance.pk)
+
+    transaction.on_commit(_send_notification)
+
+
+# =========================
+# Integrations: Payment/Courier/SMS
+# =========================
+class PaymentProviderConfig(models.Model):
+    history = HistoricalRecords()
+    PROVIDER_CHOICES = (
+        ("bkash", "bKash"),
+        ("nagad", "Nagad"),
+        ("bank", "Bank"),
+    )
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES, unique=True)
+    is_live = models.BooleanField(default=False)
+    base_url = models.URLField(blank=True)
+    token_url = models.URLField(blank=True)
+    verify_url = models.URLField(blank=True)
+    refund_url = models.URLField(blank=True)
+    access_token = models.CharField(max_length=400, blank=True)
+    app_key = models.CharField(max_length=200, blank=True)
+    app_secret = models.CharField(max_length=200, blank=True)
+    username = models.CharField(max_length=120, blank=True)
+    password = models.CharField(max_length=120, blank=True)
+    merchant_id = models.CharField(max_length=120, blank=True)
+    merchant_private_key = models.TextField(blank=True)
+    webhook_secret = models.CharField(max_length=200, blank=True)
+    signature_header = models.CharField(max_length=120, blank=True, help_text="e.g. X-Signature")
+    signature_format = models.CharField(max_length=30, blank=True, help_text="hex|base64|t=,v1=")
+    signature_payload = models.CharField(max_length=30, blank=True, help_text="raw|t+raw")
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.get_provider_display()} Config"
+
+
+class CourierProviderConfig(models.Model):
+    history = HistoricalRecords()
+    PROVIDER_CHOICES = (
+        ("steadfast", "Steadfast"),
+        ("pathao", "Pathao"),
+        ("redx", "RedX"),
+        ("sa_paribahan", "SA Paribahan"),
+    )
+    provider = models.CharField(max_length=30, choices=PROVIDER_CHOICES, unique=True)
+    is_active = models.BooleanField(default=False)
+    base_url = models.URLField(blank=True)
+    token_url = models.URLField(blank=True)
+    verify_url = models.URLField(blank=True)
+    refund_url = models.URLField(blank=True)
+    access_token = models.CharField(max_length=400, blank=True)
+    api_key = models.CharField(max_length=200, blank=True)
+    api_secret = models.CharField(max_length=200, blank=True)
+    client_id = models.CharField(max_length=200, blank=True)
+    client_secret = models.CharField(max_length=200, blank=True)
+    access_token = models.CharField(max_length=200, blank=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.get_provider_display()} Config"
+
+
+class MessagingConfig(models.Model):
+    history = HistoricalRecords()
+    sms_provider = models.CharField(max_length=80, blank=True)
+    sms_api_key = models.CharField(max_length=200, blank=True)
+    sms_sender_id = models.CharField(max_length=80, blank=True)
+
+    whatsapp_provider = models.CharField(max_length=80, blank=True)
+    whatsapp_api_key = models.CharField(max_length=200, blank=True)
+    whatsapp_sender_id = models.CharField(max_length=80, blank=True)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return "Messaging Config"
+
+
+class PaymentWebhookEvent(models.Model):
+    history = HistoricalRecords()
+    provider = models.CharField(max_length=20)
+    event_id = models.CharField(max_length=120, unique=True)
+    payload = models.JSONField()
+    received_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.provider}:{self.event_id}"
+
+
+class PaymentReconciliationReport(models.Model):
+    history = HistoricalRecords()
+    run_at = models.DateTimeField(auto_now_add=True)
+    total_pending = models.PositiveIntegerField(default=0)
+    reconciled = models.PositiveIntegerField(default=0)
+    failed = models.PositiveIntegerField(default=0)
+    details = models.JSONField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Reconcile {self.run_at:%Y-%m-%d %H:%M}"
+
+
+# =========================
+# Messaging Templates
+# =========================
+class MessageTemplate(models.Model):
+    history = HistoricalRecords()
+    CHANNEL_CHOICES = (
+        ("email", "Email"),
+        ("sms", "SMS"),
+        ("whatsapp", "WhatsApp"),
+    )
+    EVENT_CHOICES = (
+        ("order_placed", "Order Placed"),
+        ("order_status_updated", "Order Status Updated"),
+        ("order_shipped", "Order Shipped"),
+        ("order_delivered", "Order Delivered"),
+    )
+    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES)
+    event = models.CharField(max_length=30, choices=EVENT_CHOICES)
+    subject = models.CharField(max_length=200, blank=True)
+    body = models.TextField()
+    is_html = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ("channel", "event")
+
+    def __str__(self):
+        return f"{self.channel}:{self.event}"

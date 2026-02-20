@@ -1,0 +1,11 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h2>Message Template Preview</h2>
+<p><strong>Channel:</strong> {{ template.channel }}</p>
+<p><strong>Event:</strong> {{ template.event }}</p>
+<p><strong>Subject:</strong> {{ template.subject }}</p>
+<hr/>
+<div style="white-space:pre-wrap; border:1px solid #e5e7eb; padding:12px; border-radius:8px;">
+  {{ template.body }}
+</div>
+{% endblock %}
