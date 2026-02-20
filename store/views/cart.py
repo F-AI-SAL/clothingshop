@@ -61,7 +61,7 @@ def cart_add(request, product_id):
         size=size
     )
 
-    messages.success(request, "Added to cart ?")
+    messages.success(request, "Added to cart OK")
     return redirect(success_url)
 
 
@@ -72,11 +72,11 @@ def cart_update(request, product_id):
     qty = request.POST.get("qty", 1)
     cart_set_item(request, product_id=product_id, qty=qty)
 
-    messages.success(request, "Cart updated ?")
+    messages.success(request, "Cart updated OK")
     return redirect("store:cart_detail")
 
 
 def cart_remove(request, product_id):
     cart_remove_item(request, product_id)
-    messages.success(request, "Removed from cart ?")
+    messages.success(request, "Removed from cart OK")
     return redirect("store:cart_detail")

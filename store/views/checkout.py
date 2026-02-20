@@ -107,7 +107,7 @@ def checkout(request):
             request.session.modified = True
 
         clear_cart(request)
-        messages.success(request, "Order placed successfully ?")
+        messages.success(request, "Order placed successfully OK")
 
         def _send_order_created():
             try:
@@ -136,5 +136,5 @@ def apply_coupon(request):
     code = (request.POST.get("coupon") or "").strip().upper()
     request.session["coupon_code"] = code
     request.session.modified = True
-    messages.success(request, "Coupon applied ?")
+    messages.success(request, "Coupon applied OK")
     return redirect("store:checkout")

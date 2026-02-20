@@ -254,13 +254,6 @@ class OrderAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
         order = get_object_or_404(Order, id=order_id)
         return TemplateResponse(request, "admin/store/order_detail.html", {"order": order})
 
-    def view_order(self, obj):
-        url = reverse("admin:store_order_change", args=[obj.id])
-        return format_html(
-            '<a href="{}" style="padding:2px 6px;border-radius:6px;border:1px solid #e5e7eb;font-size:11px;">View</a>',
-            url,
-        )
-    view_order.short_description = "Details"
 
     def quick_actions(self, obj):
         url = reverse("admin:store_order_quick_status", args=[obj.id])
@@ -691,6 +684,21 @@ class MessageTemplateAdmin(SimpleHistoryAdmin):
     list_display = ("channel", "event", "is_active", "preview_email")
     list_filter = ("channel", "event", "is_active")
     search_fields = ("subject", "body")
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "<int:template_id>/preview/",
+                self.admin_site.admin_view(self.message_template_preview),
+                name="store_message_template_preview",
+            ),
+        ]
+        return custom + urls
+
+    def message_template_preview(self, request, template_id):
+        template = MessageTemplate.objects.get(id=template_id)
+        return TemplateResponse(request, "admin/store/message_template_preview.html", {"template": template})
 
     def preview_email(self, obj):
         if obj.channel != "email":
